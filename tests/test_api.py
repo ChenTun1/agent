@@ -1,11 +1,15 @@
 # tests/test_api.py
 import pytest
 from fastapi.testclient import TestClient
-from backend.main import app
 
-client = TestClient(app)
 
-def test_health_check():
+@pytest.fixture
+def client():
+    """创建测试客户端"""
+    from backend.main import app
+    return TestClient(app=app)
+
+def test_health_check(client):
     """测试健康检查接口"""
     response = client.get("/health")
 
@@ -13,7 +17,7 @@ def test_health_check():
     assert response.json() == {"status": "healthy"}
 
 
-def test_upload_pdf():
+def test_upload_pdf(client):
     """测试PDF上传接口"""
     # 创建一个模拟的PDF文件
     with open("tests/fixtures/sample.pdf", "rb") as f:
@@ -27,7 +31,7 @@ def test_upload_pdf():
     assert response.json()["status"] == "success"
 
 
-def test_chat_endpoint():
+def test_chat_endpoint(client):
     """测试问答接口"""
     response = client.post(
         "/chat",
@@ -48,7 +52,7 @@ def test_chat_endpoint():
         assert "sources" in data
 
 
-def test_invalid_file_upload():
+def test_invalid_file_upload(client):
     """测试上传非PDF文件"""
     # 模拟上传txt文件
     from io import BytesIO
@@ -62,7 +66,7 @@ def test_invalid_file_upload():
     assert response.status_code == 400
 
 
-def test_chat_missing_fields():
+def test_chat_missing_fields(client):
     """测试问答接口缺少字段"""
     response = client.post(
         "/chat",

@@ -183,5 +183,33 @@ def send_feedback(question: str, answer: str, feedback_type: str):
         print(f"Failed to send feedback: {str(e)}")
 
 
+def get_suggestions():
+    """从后端获取智能推荐问题"""
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/suggestions",
+            json={'pdf_id': st.session_state.get('pdf_id', '')},
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            return response.json()['questions']
+        else:
+            # 后备方案：返回默认问题
+            return [
+                "这份文档的主要内容是什么?",
+                "有哪些关键信息?",
+                "总结全文要点"
+            ]
+    except Exception as e:
+        print(f"Failed to get suggestions: {str(e)}")
+        # 后备方案：返回默认问题
+        return [
+            "这份文档的主要内容是什么?",
+            "有哪些关键信息?",
+            "总结全文要点"
+        ]
+
+
 if __name__ == "__main__":
     main()
