@@ -3,13 +3,13 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # API Keys
-    anthropic_api_key: str
-    openai_api_key: str
+    anthropic_api_key: str = "test_key"
+    openai_api_key: str = "test_key"
 
     # Database
-    database_url: str
-    supabase_url: str
-    supabase_key: str
+    database_url: str = "postgresql://test:test@localhost/test"
+    supabase_url: str = "http://localhost"
+    supabase_key: str = "test_key"
 
     # Qdrant
     qdrant_url: str = "http://localhost:6333"
@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        env_file_encoding = 'utf-8'
+        extra = 'ignore'
 
 @lru_cache()
 def get_settings():
