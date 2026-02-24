@@ -1,0 +1,148 @@
+{
+  "description": "Golden Q&A测试集 - 用于验证系统准确率",
+  "target_accuracy": 0.80,
+  "test_cases": [
+    {
+      "test_id": "academic_paper_001",
+      "pdf": "tests/fixtures/academic_paper.pdf",
+      "pdf_description": "学术论文示例",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "论文的主要贡献是什么?",
+          "expected_pages": [1, 47],
+          "expected_keywords": ["贡献", "提出", "方法"],
+          "category": "main_contribution"
+        },
+        {
+          "id": "q2",
+          "question": "实验准确率是多少?",
+          "expected_pages": [23],
+          "expected_keywords": ["准确率", "%", "实验"],
+          "category": "experimental_results"
+        },
+        {
+          "id": "q3",
+          "question": "使用了什么研究方法?",
+          "expected_pages": [8, 9, 10],
+          "expected_keywords": ["方法", "实验", "数据"],
+          "category": "methodology"
+        },
+        {
+          "id": "q4",
+          "question": "相关工作有哪些?",
+          "expected_pages": [3, 4],
+          "expected_keywords": ["相关", "工作", "研究"],
+          "category": "related_work"
+        },
+        {
+          "id": "q5",
+          "question": "论文的局限性是什么?",
+          "expected_pages": [45, 46],
+          "expected_keywords": ["局限", "限制", "未来"],
+          "category": "limitations"
+        }
+      ]
+    },
+    {
+      "test_id": "technical_doc_001",
+      "pdf": "tests/fixtures/technical_manual.pdf",
+      "pdf_description": "技术文档示例",
+      "questions": [
+        {
+          "id": "q6",
+          "question": "如何安装这个软件?",
+          "expected_pages": [2, 3],
+          "expected_keywords": ["安装", "步骤", "命令"],
+          "category": "installation"
+        },
+        {
+          "id": "q7",
+          "question": "主要功能有哪些?",
+          "expected_pages": [1, 5],
+          "expected_keywords": ["功能", "特性"],
+          "category": "features"
+        },
+        {
+          "id": "q8",
+          "question": "系统要求是什么?",
+          "expected_pages": [2],
+          "expected_keywords": ["要求", "配置", "版本"],
+          "category": "requirements"
+        }
+      ]
+    },
+    {
+      "test_id": "contract_001",
+      "pdf": "tests/fixtures/sample_contract.pdf",
+      "pdf_description": "合同文档示例",
+      "questions": [
+        {
+          "id": "q9",
+          "question": "合同的有效期是多久?",
+          "expected_pages": [1],
+          "expected_keywords": ["有效期", "期限", "年"],
+          "category": "contract_terms"
+        },
+        {
+          "id": "q10",
+          "question": "违约责任如何规定?",
+          "expected_pages": [8, 9],
+          "expected_keywords": ["违约", "责任", "赔偿"],
+          "category": "liability"
+        }
+      ]
+    },
+    {
+      "test_id": "edge_cases",
+      "pdf": "tests/fixtures/sample.pdf",
+      "pdf_description": "边界情况测试",
+      "questions": [
+        {
+          "id": "q11",
+          "question": "第5页的内容是什么?",
+          "expected_pages": [5],
+          "expected_keywords": [],
+          "category": "page_specific",
+          "note": "测试页面定位功能"
+        },
+        {
+          "id": "q12",
+          "question": "文档中没有提到的内容",
+          "expected_pages": [],
+          "expected_keywords": ["未找到", "没有"],
+          "category": "not_found",
+          "note": "测试负面情况,应该返回未找到"
+        },
+        {
+          "id": "q13",
+          "question": "总结全文的主要观点",
+          "expected_pages": [1, 47],
+          "expected_keywords": ["总结", "主要"],
+          "category": "summary",
+          "note": "测试综合理解能力"
+        }
+      ]
+    }
+  ],
+  "evaluation_criteria": {
+    "page_citation_accuracy": {
+      "weight": 0.4,
+      "description": "引用页码是否正确"
+    },
+    "keyword_presence": {
+      "weight": 0.3,
+      "description": "答案是否包含关键词"
+    },
+    "no_hallucination": {
+      "weight": 0.3,
+      "description": "是否存在幻觉内容"
+    }
+  },
+  "notes": [
+    "每个问题至少需要匹配一个expected_pages中的页码",
+    "答案中应该包含至少50%的expected_keywords",
+    "对于not_found类别,必须明确说明未找到相关内容",
+    "所有答案必须包含来源标注,格式:[来源: 第X页]"
+  ]
+}
