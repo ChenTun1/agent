@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 from contextlib import contextmanager
+import threading
 import os
 
 from backend.models_db import Base
@@ -14,15 +15,19 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///data/app.db')
 
 
 class DatabaseManager:
-    """数据库管理器 - 单例模式"""
+    """数据库管理器 - 线程安全单例模式"""
 
     _instance = None
     _engine = None
     _SessionLocal = None
+    _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            with cls._lock:
+                # Double-check pattern for thread safety
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
