@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
 
+    # Redis
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+
     # App Settings
     max_file_size_mb: int = 10
     free_tier_pdf_limit: int = 3
