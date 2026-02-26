@@ -1,126 +1,123 @@
-# AI PDF Chat
+# AI PDF 智能问答系统
 
-智能PDF对话工具 - 上传PDF,用自然语言提问,AI精准回答并标注出处
+上传PDF，用自然语言提问，AI精准回答并标注出处
 
-## Tech Stack
-- Frontend: Streamlit
-- Backend: FastAPI
-- Vector DB: Qdrant
-- LLM: Claude API
-- Database: PostgreSQL (Supabase)
+## 🚀 快速开始
 
-## Quick Start
+### 1. 启动服务
 
-### Prerequisites
-- Python 3.11 or higher
-- Docker (for Qdrant)
-- Git
-
-### Development Setup
-
-1. **Clone repository**
-   ```bash
-   git clone <your-repo-url>
-   cd agent
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Start Qdrant vector database**
-   ```bash
-   docker-compose up -d
-   ```
-   Qdrant will be available at http://localhost:6333
-
-4. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and fill in your API keys (see Environment Variables section below)
-
-5. **Run backend server**
-   ```bash
-   uvicorn backend.main:app --reload
-   ```
-   API will be available at http://localhost:8000
-   Interactive API docs: http://localhost:8000/docs
-
-6. **Run frontend (in a new terminal)**
-   ```bash
-   streamlit run frontend/app.py
-   ```
-   Frontend will be available at http://localhost:8501
-
-### Testing
-
-Run all tests:
 ```bash
-pytest tests/ -v
+./start.sh
 ```
 
-Run specific test file:
-```bash
-pytest tests/test_api.py -v
+### 2. 访问应用
+
+```
+http://localhost:8501
 ```
 
-Run with coverage:
+### 3. 使用流程
+
+1. 上传 PDF 文件
+2. 等待处理完成
+3. 输入问题提问
+4. 查看答案和来源
+
+## 📊 当前配置
+
+- **Claude AI**: vibe.deepminer.ai 代理
+- **Embedding**: 硅基流动
+- **模型**: BAAI/bge-large-zh-v1.5 (中文优化)
+- **向量库**: Qdrant 内存模式
+
+## 🛠️ 基础设施 (Phase 0)
+
+### 启动服务
+
 ```bash
-pytest --cov=backend tests/
+# 1. 启动 Docker 服务
+docker-compose up -d
+
+# 2. 初始化数据库
+python scripts/init_db.py
+
+# 3. 验证环境
+./scripts/check_infrastructure.sh
 ```
 
-## Features
-- PDF upload and text extraction
-- Intelligent Q&A with source citations
-- Conversation history
-- Accurate retrieval with mixed search
+### 服务端口
 
-## Deployment
+- **Redis**: 6379 (缓存层)
+- **Qdrant**: 6333 (HTTP), 6334 (gRPC)
+- **SQLite**: data/app.db (元数据存储)
 
-### Railway (Backend)
-1. Create new project on Railway
-2. Connect GitHub repo
-3. Set environment variables:
-   - `ANTHROPIC_API_KEY`: Your Claude API key
-   - `OPENAI_API_KEY`: Your OpenAI API key
-   - `DATABASE_URL`: PostgreSQL connection string
-   - `SUPABASE_URL`: Supabase project URL
-   - `SUPABASE_KEY`: Supabase API key
-   - `QDRANT_URL`: Qdrant instance URL
-   - `QDRANT_API_KEY`: Qdrant API key (if required)
-4. Deploy from main branch using `deploy/railway.json` config
+### Celery Worker (可选)
 
-### Streamlit Cloud (Frontend)
-1. Deploy frontend on Streamlit Cloud
-2. Set environment variable:
-   - `BACKEND_URL`: Your Railway backend URL
-3. Deploy from main branch
-
-### Docker Local Development
-Build and run backend:
 ```bash
-docker build -f Dockerfile.backend -t pdf-chat-backend .
-docker run -p 8000:8000 --env-file .env pdf-chat-backend
+# 启动异步任务处理
+./scripts/start_celery.sh
 ```
 
-Build and run frontend:
+## 🛠️ 服务管理
+
 ```bash
-docker build -f Dockerfile.frontend -t pdf-chat-frontend .
-docker run -p 8501:8501 -e BACKEND_URL=http://localhost:8000 pdf-chat-frontend
+# 启动应用
+./start.sh
+
+# 停止应用
+./stop.sh
+
+# 查看日志
+tail -f logs/backend.log
+tail -f logs/celery.log  # Celery 日志
 ```
 
-## Environment Variables
-All environment variables are defined in `.env.example`. Copy this file to `.env` and fill in your API keys:
+## 📁 项目结构
 
-- `ANTHROPIC_API_KEY`: Claude API key from Anthropic Console
-- `OPENAI_API_KEY`: OpenAI API key for embeddings
-- `DATABASE_URL`: PostgreSQL connection string
-- `SUPABASE_URL`: Supabase project URL
-- `SUPABASE_KEY`: Supabase anon/service key
-- `QDRANT_URL`: Qdrant server URL (default: http://localhost:6333)
-- `QDRANT_API_KEY`: Qdrant API key (optional for local)
-- `MAX_FILE_SIZE_MB`: Maximum PDF file size (default: 10)
-- `FREE_TIER_PDF_LIMIT`: Free tier PDF upload limit (default: 3)
-- `FREE_TIER_QUESTION_LIMIT`: Free tier questions per PDF (default: 10)
+```
+agent/
+├── backend/              # 后端服务
+│   ├── models_db.py      # 数据库模型
+│   ├── database.py       # 数据库管理器
+│   ├── celery_app.py     # Celery 应用
+│   ├── celeryconfig.py   # Celery 配置
+│   └── health.py         # 健康检查
+├── frontend/             # 前端界面
+├── scripts/              # 工具脚本
+│   ├── init_db.py        # 数据库初始化
+│   ├── start_celery.sh   # Celery 启动
+│   └── check_infrastructure.sh  # 健康检查
+├── docs/                 # 文档
+│   ├── plans/            # 实施计划
+│   └── phase0-completion.md  # Phase 0 完成报告
+├── data/                 # SQLite 数据库
+├── docker-compose.yml    # Docker 编排
+├── .env.example          # 环境变量模板
+├── start.sh              # 启动脚本
+└── 文档归档/             # 参考文档
+```
+
+## 📚 文档
+
+- [认证完成后启动指南](./认证完成后启动指南.md)
+- [文档归档](./文档归档/) - 详细配置说明
+
+## ⚠️ 注意
+
+当前需要完成**硅基流动身份验证**才能正常使用。
+
+验证完成后即可开始使用！
+
+---
+
+## 🏗️ 企业级优化进度
+
+- ✅ **Phase 0**: 基础设施准备 (Redis, Qdrant, SQLite, Celery) - 已完成
+- 🚧 **Phase 1**: 核心算法实现 (混合检索, 智能分块) - 计划中
+- 📋 **Phase 2-5**: 后续优化 - 待定
+
+详见: [docs/plans/](docs/plans/)
+
+---
+
+**技术栈**: FastAPI + Streamlit + Qdrant + Claude + 硅基流动 + Redis + Celery + SQLite
