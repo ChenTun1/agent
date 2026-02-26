@@ -8,6 +8,7 @@ from backend.models import (
     FeedbackRequest,
     HealthResponse
 )
+from backend.routers import tasks
 import uuid
 import os
 import shutil
@@ -44,6 +45,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册路由
+app.include_router(tasks.router)
 
 # 文件存储目录
 UPLOAD_DIR = "uploads"
