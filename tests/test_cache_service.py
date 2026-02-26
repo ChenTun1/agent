@@ -71,20 +71,28 @@ def test_delete(cache_service):
 
 
 def test_clear_pattern(cache_service):
-    """Test pattern-based cache clearing."""
-    # Arrange
-    cache_service.redis.keys.return_value = [
-        b"pdf:123:chunk:1",
-        b"pdf:123:chunk:2",
-        b"pdf:123:metadata"
-    ]
+    """Test pattern-based cache clearing using SCAN."""
+    # Arrange - Mock SCAN to return keys in one iteration
+    cache_service.redis.scan.return_value = (
+        0,  # cursor (0 means end)
+        ["pdf:123:chunk:1", "pdf:123:chunk:2", "pdf:123:metadata"]
+    )
 
     # Act
     cache_service.clear_pattern("pdf:123:*")
 
     # Assert
-    cache_service.redis.keys.assert_called_once_with("pdf:123:*")
-    assert cache_service.redis.delete.call_count == 3
+    cache_service.redis.scan.assert_called_once_with(
+        cursor=0,
+        match="pdf:123:*",
+        count=100
+    )
+    # Should call delete once with all keys (bulk delete)
+    cache_service.redis.delete.assert_called_once_with(
+        "pdf:123:chunk:1",
+        "pdf:123:chunk:2",
+        "pdf:123:metadata"
+    )
 
 
 def test_cache_decorator(cache_service):

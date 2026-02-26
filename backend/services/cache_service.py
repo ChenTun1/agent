@@ -1,5 +1,7 @@
 """Redis cache service for caching PDF chunks, embeddings, and QA results."""
 import json
+import hashlib
+import threading
 import redis
 from functools import wraps
 from typing import Any, Optional, Callable
@@ -10,14 +12,22 @@ class CacheService:
     """Redis cache service with JSON serialization and TTL support."""
 
     def __init__(self):
-        """Initialize Redis connection."""
+        """Initialize Redis connection with error handling and auth support."""
         settings = get_settings()
-        self.redis = redis.Redis(
-            host=settings.redis_host,
-            port=settings.redis_port,
-            db=settings.redis_db,
-            decode_responses=True
-        )
+        try:
+            self.redis = redis.Redis(
+                host=settings.redis_host,
+                port=settings.redis_port,
+                db=settings.redis_db,
+                password=getattr(settings, 'redis_password', None),
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5
+            )
+            # Test connection
+            self.redis.ping()
+        except redis.ConnectionError as e:
+            raise ConnectionError(f"Failed to connect to Redis: {e}")
 
     def set(self, key: str, value: Any, ttl: int = 3600) -> None:
         """
@@ -27,9 +37,15 @@ class CacheService:
             key: Cache key
             value: Value to cache (will be JSON serialized)
             ttl: Time to live in seconds (default: 1 hour)
+
+        Raises:
+            redis.RedisError: If Redis operation fails
         """
-        serialized = json.dumps(value)
-        self.redis.setex(key, ttl, serialized)
+        try:
+            serialized = json.dumps(value)
+            self.redis.setex(key, ttl, serialized)
+        except redis.RedisError as e:
+            raise redis.RedisError(f"Failed to set cache key '{key}': {e}") from e
 
     def get(self, key: str) -> Optional[Any]:
         """
@@ -40,11 +56,17 @@ class CacheService:
 
         Returns:
             Deserialized value or None if not found
+
+        Raises:
+            redis.RedisError: If Redis operation fails
         """
-        value = self.redis.get(key)
-        if value is None:
-            return None
-        return json.loads(value)
+        try:
+            value = self.redis.get(key)
+            if value is None:
+                return None
+            return json.loads(value)
+        except redis.RedisError as e:
+            raise redis.RedisError(f"Failed to get cache key '{key}': {e}") from e
 
     def delete(self, key: str) -> None:
         """
@@ -52,24 +74,48 @@ class CacheService:
 
         Args:
             key: Cache key to delete
+
+        Raises:
+            redis.RedisError: If Redis operation fails
         """
-        self.redis.delete(key)
+        try:
+            self.redis.delete(key)
+        except redis.RedisError as e:
+            raise redis.RedisError(f"Failed to delete cache key '{key}': {e}") from e
 
     def clear_pattern(self, pattern: str) -> None:
         """
-        Clear all keys matching a pattern.
+        Clear all keys matching a pattern using SCAN (production-safe).
 
         Args:
             pattern: Redis pattern (e.g., "pdf:123:*")
+
+        Raises:
+            redis.RedisError: If Redis operation fails
         """
-        keys = self.redis.keys(pattern)
-        if keys:
-            for key in keys:
-                self.redis.delete(key)
+        try:
+            cursor = 0
+            keys = []
+            # Use SCAN instead of KEYS to avoid blocking Redis
+            while True:
+                cursor, partial_keys = self.redis.scan(
+                    cursor=cursor,
+                    match=pattern,
+                    count=100
+                )
+                keys.extend(partial_keys)
+                if cursor == 0:
+                    break
+
+            # Bulk delete for better performance
+            if keys:
+                self.redis.delete(*keys)
+        except redis.RedisError as e:
+            raise redis.RedisError(f"Failed to clear pattern '{pattern}': {e}") from e
 
     def _make_cache_key(self, prefix: str, func_name: str, args: tuple, kwargs: dict) -> str:
         """
-        Generate cache key from function name and arguments.
+        Generate cache key from function name and arguments using JSON + hash.
 
         Args:
             prefix: Prefix for the cache key
@@ -78,29 +124,33 @@ class CacheService:
             kwargs: Function keyword arguments
 
         Returns:
-            Cache key string
+            Cache key string with hash to prevent collisions
         """
-        # Create a simple key from function name and args
-        args_str = "_".join(str(arg) for arg in args)
-        kwargs_str = "_".join(f"{k}_{v}" for k, v in sorted(kwargs.items()))
-        parts = [prefix, func_name, args_str, kwargs_str]
-        return ":".join(filter(None, parts))
+        # Use JSON serialization + MD5 hash to prevent collisions
+        args_dict = {"args": args, "kwargs": kwargs}
+        args_json = json.dumps(args_dict, sort_keys=True)
+        hash_val = hashlib.md5(args_json.encode()).hexdigest()[:12]
+        return f"{prefix}:{func_name}:{hash_val}"
 
 
-# Global singleton instance
+# Global singleton instance with thread-safe initialization
 _cache_service_instance: Optional[CacheService] = None
+_cache_lock = threading.Lock()
 
 
 def get_cache_service() -> CacheService:
     """
-    Get the global cache service instance (singleton pattern).
+    Get the global cache service instance (thread-safe singleton pattern).
 
     Returns:
         CacheService instance
     """
     global _cache_service_instance
     if _cache_service_instance is None:
-        _cache_service_instance = CacheService()
+        with _cache_lock:
+            # Double-checked locking for thread safety
+            if _cache_service_instance is None:
+                _cache_service_instance = CacheService()
     return _cache_service_instance
 
 
